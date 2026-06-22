@@ -83,8 +83,8 @@ To test with your own Excel file, upload a `.xlsx` with columns: `Associate Name
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/rollcall-demo.git
-cd rollcall-demo
+git clone https://github.com/Haider094/rollcall-pro.git
+cd rollcall-pro
 ```
 
 ### 2. Install dependencies
