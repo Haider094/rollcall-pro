@@ -6,6 +6,19 @@ A responsive, offline-capable web application for employee roll call and attenda
 
 ---
 
+## Screenshots
+
+**Upload Screen** — Upload your Excel schedule or load demo data instantly.
+![Upload Screen](screenshots/upload.png)
+
+**Roll Call Screen** — One-tap status buttons with live attendance stats and per-associate notes.
+![Roll Call Screen](screenshots/rollcall.png)
+
+**Complete Screen** — Summary modal with download and email options once all associates are marked.
+![Complete Screen](screenshots/complete.png)
+
+---
+
 ## Features
 
 - **Excel Schedule Upload** — Upload `.xlsx` files exported from any scheduling system. Automatically parses associate names, IDs, routes, shifts, and wave assignments.
