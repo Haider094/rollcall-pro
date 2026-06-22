@@ -1,0 +1,5 @@
+node_modules/
+.env
+*.log
+sdk-debug.txt
+.DS_Store

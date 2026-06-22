@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RollCall Pro - Employee Attendance System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-600: #4b5563;
+    --gray-800: #1f2937;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-800);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .logo { font-size: 20px; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+  .logo span { color: var(--gray-800); }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .badge-online {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--success); font-weight: 500;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .user-chip {
+    background: var(--gray-100); border-radius: 999px;
+    padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--gray-600);
+  }
+
+  /* MAIN LAYOUT */
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px; }
+
+  /* STEP INDICATOR */
+  .steps {
+    display: flex; align-items: center; gap: 0; margin-bottom: 36px;
+    background: #fff; border-radius: var(--radius); padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .step { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+    background: var(--gray-200); color: var(--gray-600);
+    transition: all .3s;
+  }
+  .step.active .step-num { background: var(--primary); color: #fff; }
+  .step.done .step-num { background: var(--success); color: #fff; }
+  .step-label { font-size: 13px; color: var(--gray-600); font-weight: 500; }
+  .step.active .step-label { color: var(--primary); font-weight: 600; }
+  .step.done .step-label { color: var(--success); }
+  .step-divider { flex: 0 0 32px; height: 2px; background: var(--gray-200); margin: 0 4px; }
+  .step-divider.done { background: var(--success); }
+
+  /* CARDS */
+  .card {
+    background: #fff; border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-200);
+    padding: 28px; margin-bottom: 20px;
+  }
+  .card-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: var(--gray-800); }
+  .card-sub { font-size: 14px; color: var(--gray-600); margin-bottom: 24px; }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 2px dashed var(--gray-200); border-radius: var(--radius);
+    padding: 48px 24px; text-align: center; cursor: pointer;
+    transition: all .2s; background: var(--gray-50);
+  }
+  .upload-zone:hover { border-color: var(--primary); background: #eff6ff; }
+  .upload-zone.drag-over { border-color: var(--primary); background: #eff6ff; }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .upload-hint { font-size: 13px; color: var(--gray-400); margin-bottom: 20px; }
+  .btn-upload {
+    display: inline-block; background: var(--primary); color: #fff;
+    padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: none; transition: background .2s;
+  }
+  .btn-upload:hover { background: var(--primary-dark); }
+  #fileInput { display: none; }
+
+  /* DATE BAR */
+  .date-bar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+    padding: 14px 20px; margin-bottom: 20px;
+  }
+  .date-label { font-size: 14px; font-weight: 600; color: var(--primary); }
+  .date-select-wrap { display: flex; align-items: center; gap: 8px; }
+  .date-select-wrap label { font-size: 13px; color: var(--gray-600); }
+  .date-select-wrap select {
+    font-size: 13px; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--gray-200); background: #fff; color: var(--gray-800);
+  }
+
+  /* ROSTER STATS */
+  .roster-stats {
+    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .stat-chip {
+    flex: 1; min-width: 100px; background: var(--gray-50); border: 1px solid var(--gray-200);
+    border-radius: 10px; padding: 14px 16px; text-align: center;
+  }
+  .stat-num { font-size: 28px; font-weight: 800; color: var(--gray-800); }
+  .stat-lbl { font-size: 12px; color: var(--gray-400); font-weight: 500; margin-top: 2px; }
+  .stat-chip.present .stat-num { color: var(--success); }
+  .stat-chip.late .stat-num { color: var(--warning); }
+  .stat-chip.absent .stat-num { color: var(--danger); }
+  .stat-chip.pending-s .stat-num { color: var(--gray-400); }
+
+  /* SEARCH BAR */
+  .search-bar {
+    width: 100%; padding: 10px 14px; border-radius: 10px;
+    border: 1px solid var(--gray-200); font-size: 14px; margin-bottom: 16px;
+    outline: none; transition: border .2s;
+  }
+  .search-bar:focus { border-color: var(--primary); }
+
+  /* ASSOCIATE ROW */
+  .associate-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .associate-row {
+    border: 1px solid var(--gray-200); border-radius: 12px; padding: 16px;
+    background: #fff; transition: all .2s;
+  }
+  .associate-row.status-present { border-color: #86efac; background: #f0fdf4; }
+  .associate-row.status-late { border-color: #fcd34d; background: #fffbeb; }
+  .associate-row.status-callout { border-color: #fca5a5; background: #fef2f2; }
+  .associate-row.status-ncns { border-color: #ef4444; background: #fef2f2; }
+  .associate-row.status-other { border-color: #c4b5fd; background: #faf5ff; }
+
+  .row-top {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; flex-shrink: 0;
+    background: var(--gray-100); color: var(--gray-600);
+  }
+  .assoc-info { flex: 1; min-width: 0; }
+  .assoc-name { font-size: 15px; font-weight: 700; color: var(--gray-800); }
+  .assoc-meta { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+  .time-badge {
+    font-size: 11px; color: var(--gray-400); font-weight: 500;
+    background: var(--gray-100); padding: 3px 8px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .time-badge.recorded { background: #dcfce7; color: var(--success); }
+
+  /* STATUS BUTTONS */
+  .status-btns {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .status-btn {
+    flex: 1; min-width: 80px; padding: 10px 6px; border-radius: 10px;
+    border: 2px solid var(--gray-200); background: #fff;
+    font-size: 12px; font-weight: 600; color: var(--gray-600);
+    cursor: pointer; transition: all .15s; text-align: center;
+    user-select: none;
+  }
+  .status-btn:hover { border-color: var(--gray-400); background: var(--gray-50); }
+  .status-btn.active-present { border-color: var(--success); background: #dcfce7; color: var(--success); }
+  .status-btn.active-late { border-color: var(--warning); background: #fef3c7; color: var(--warning); }
+  .status-btn.active-callout { border-color: var(--danger); background: #fee2e2; color: var(--danger); }
+  .status-btn.active-ncns { border-color: #b91c1c; background: #fecaca; color: #b91c1c; }
+  .status-btn.active-other { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
+
+  /* NOTES */
+  .notes-input {
+    width: 100%; padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--gray-200); font-size: 13px; color: var(--gray-800);
+    resize: none; outline: none; font-family: inherit; transition: border .2s;
+    background: var(--gray-50);
+  }
+  .notes-input:focus { border-color: var(--primary); background: #fff; }
+
+  /* COMPLETE BUTTON */
+  .complete-bar {
+    background: #fff; border-top: 1px solid var(--gray-200);
+    position: sticky; bottom: 0; padding: 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    border-radius: var(--radius); margin-top: 20px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+  }
+  .complete-info { font-size: 14px; color: var(--gray-600); }
+  .complete-info strong { color: var(--gray-800); }
+  .btn-complete {
+    background: var(--success); color: #fff;
+    border: none; border-radius: 10px; padding: 14px 32px;
+    font-size: 16px; font-weight: 700; cursor: pointer; transition: background .2s;
+    white-space: nowrap;
+  }
+  .btn-complete:hover { background: #15803d; }
+  .btn-complete:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999; padding: 16px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-overlay.visible { opacity: 1; pointer-events: all; }
+  .modal {
+    background: #fff; border-radius: 20px; padding: 32px;
+    max-width: 480px; width: 100%;
+    transform: scale(.95); transition: transform .2s;
+  }
+  .modal-overlay.visible .modal { transform: scale(1); }
+  .modal-icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
+  .modal-title { font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 8px; }
+  .modal-body { font-size: 14px; color: var(--gray-600); text-align: center; margin-bottom: 28px; line-height: 1.6; }
+  .modal-actions { display: flex; gap: 12px; flex-direction: column; }
+  .btn-download {
+    background: var(--primary); color: #fff; border: none; border-radius: 10px;
+    padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .2s;
+  }
+  .btn-download:hover { background: var(--primary-dark); }
+  .btn-email {
+    background: var(--gray-100); color: var(--gray-800); border: none; border-radius: 10px;
+    padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .2s;
+  }
+  .btn-email:hover { background: var(--gray-200); }
+  .btn-new-session {
+    background: #fff; color: var(--gray-600); border: 1px solid var(--gray-200);
+    border-radius: 10px; padding: 14px; font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--gray-800); color: #fff;
+    padding: 12px 24px; border-radius: 999px; font-size: 14px; font-weight: 500;
+    z-index: 9999; transition: transform .3s ease;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* EMPTY STATE */
+  .empty-state { text-align: center; padding: 60px 24px; color: var(--gray-400); }
+  .empty-state .e-icon { font-size: 56px; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 18px; font-weight: 600; color: var(--gray-600); margin-bottom: 8px; }
+
+  /* DEMO FILE BUTTON */
+  .btn-demo {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--gray-100); color: var(--gray-600);
+    border: 1px solid var(--gray-200); border-radius: 8px;
+    padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+    margin-top: 12px; transition: background .2s;
+  }
+  .btn-demo:hover { background: var(--gray-200); }
+
+  /* OFFLINE BANNER */
+  .offline-banner {
+    background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px;
+    padding: 10px 16px; font-size: 13px; color: #92400e; font-weight: 500;
+    display: none; align-items: center; gap: 8px; margin-bottom: 16px;
+  }
+  .offline-banner.show { display: flex; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .steps { overflow-x: auto; gap: 8px; }
+    .step-label { display: none; }
+    .row-top { gap: 10px; }
+    .status-btn { min-width: 60px; font-size: 11px; padding: 8px 4px; }
+    .complete-bar { flex-direction: column; }
+    .btn-complete { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Roll<span>Call</span> Pro</div>
+  <div class="header-right">
+    <div class="badge-online"><div class="dot"></div><span id="connStatus">Online</span></div>
+    <div class="user-chip">Supervisor: J. Martinez</div>
+  </div>
+</header>
+
+<main>
+  <!-- STEP INDICATOR -->
+  <div class="steps">
+    <div class="step done" id="step1">
+      <div class="step-num" id="snum1">✓</div>
+      <div class="step-label">Login</div>
+    </div>
+    <div class="step-divider done"></div>
+    <div class="step active" id="step2">
+      <div class="step-num" id="snum2">2</div>
+      <div class="step-label">Upload Schedule</div>
+    </div>
+    <div class="step-divider" id="div2"></div>
+    <div class="step" id="step3">
+      <div class="step-num" id="snum3">3</div>
+      <div class="step-label">Roll Call</div>
+    </div>
+    <div class="step-divider" id="div3"></div>
+    <div class="step" id="step4">
+      <div class="step-num" id="snum4">4</div>
+      <div class="step-label">Complete</div>
+    </div>
+  </div>
+
+  <!-- OFFLINE BANNER -->
+  <div class="offline-banner" id="offlineBanner">
+    ⚠ You are offline. Attendance data is being saved locally and will sync when connected.
+  </div>
+
+  <!-- UPLOAD SECTION -->
+  <div id="uploadSection">
+    <div class="card">
+      <div class="card-title">Upload Today's Schedule</div>
+      <div class="card-sub">Upload the Excel schedule exported from your scheduling system. The app will automatically detect today's roster.</div>
+
+      <div class="upload-zone" id="dropZone">
+        <div class="upload-icon">📋</div>
+        <div class="upload-title">Drop your schedule here</div>
+        <div class="upload-hint">Supports .xlsx files • Detects today's shift automatically</div>
+        <label class="btn-upload" for="fileInput">Browse File</label>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+        <br>
+        <button class="btn-demo" onclick="loadDemoData()">
+          <span>🗂</span> Load Demo Schedule (no file needed)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROLLCALL SECTION -->
+  <div id="rollcallSection" style="display:none;">
+
+    <!-- DATE BAR -->
+    <div class="date-bar">
+      <div class="date-label" id="currentDateLabel">Today's Roll Call</div>
+      <div class="date-select-wrap">
+        <label>Override Day:</label>
+        <select id="dayOverride" onchange="filterByDay()">
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+          <option value="Saturday">Saturday</option>
+          <option value="Sunday">Sunday</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="roster-stats">
+      <div class="stat-chip pending-s"><div class="stat-num" id="statTotal">0</div><div class="stat-lbl">Scheduled</div></div>
+      <div class="stat-chip present"><div class="stat-num" id="statPresent">0</div><div class="stat-lbl">Present</div></div>
+      <div class="stat-chip late"><div class="stat-num" id="statLate">0</div><div class="stat-lbl">Late</div></div>
+      <div class="stat-chip absent"><div class="stat-num" id="statAbsent">0</div><div class="stat-lbl">Absent</div></div>
+      <div class="stat-chip pending-s"><div class="stat-num" id="statPending">0</div><div class="stat-lbl">Pending</div></div>
+    </div>
+
+    <!-- SEARCH -->
+    <input type="text" class="search-bar" placeholder="Search associate name or route..." oninput="filterSearch(this.value)">
+
+    <!-- LIST -->
+    <div class="associate-list" id="associateList"></div>
+
+    <!-- EXTRA NOTE ROW -->
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title" style="font-size:15px;">Extra Attendees / Notes</div>
+      <div class="card-sub" style="margin-bottom:12px;">Record anyone present who was not on the scheduled roster.</div>
+      <textarea class="notes-input" id="extraNotes" rows="3" placeholder="e.g. John D. (T-9821) showed up as a substitute for Route 44..."></textarea>
+    </div>
+
+    <!-- COMPLETE BAR -->
+    <div class="complete-bar">
+      <div class="complete-info" id="completeInfo">Mark all associates before completing.</div>
+      <button class="btn-complete" id="completeBtn" onclick="completeRollCall()">Complete Roll Call</button>
+    </div>
+  </div>
+</main>
+
+<!-- COMPLETION MODAL -->
+<div class="modal-overlay" id="completeModal">
+  <div class="modal">
+    <div class="modal-icon">✅</div>
+    <div class="modal-title">Roll Call Complete</div>
+    <div class="modal-body" id="modalSummary">
+      Attendance report is ready. Select an action below.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-download" onclick="downloadReport()">📥 Download Excel Report</button>
+      <button class="btn-email" onclick="simulateEmail()">📧 Email to Distribution List</button>
+      <button class="btn-new-session" onclick="newSession()">Start New Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// DEMO DATA — simulates a parsed Excel schedule
+// ============================================================
+const DEMO_EMPLOYEES = [
+  { name: "Marcus Johnson",   id: "T-1021", route: "Route 12", shift: "AM", wave: "Wave 1", days: ["Monday","Tuesday","Wednesday","Thursday","Friday"] },
+  { name: "Sandra Rivera",    id: "T-1034", route: "Route 07", shift: "AM", wave: "Wave 1", days: ["Monday","Wednesday","Friday"] },
+  { name: "DeShawn Williams", id: "T-1056", route: "Route 31", shift: "AM", wave: "Wave 2", days: ["Monday","Tuesday","Thursday","Friday"] },
+  { name: "Priya Patel",      id: "T-1072", route: "Route 22", shift: "AM", wave: "Wave 2", days: ["Tuesday","Wednesday","Thursday","Friday","Saturday"] },
+  { name: "Kevin O'Brien",    id: "T-1088", route: "Route 44", shift: "AM", wave: "Wave 1", days: ["Monday","Tuesday","Wednesday","Friday"] },
+  { name: "Amara Osei",       id: "T-1103", route: "Route 15", shift: "AM", wave: "Wave 3", days: ["Monday","Wednesday","Thursday","Saturday"] },
+  { name: "Lisa Hernandez",   id: "T-1115", route: "Route 08", shift: "AM", wave: "Wave 1", days: ["Tuesday","Thursday","Friday","Saturday"] },
+  { name: "Tyrone Bell",      id: "T-1128", route: "Route 29", shift: "AM", wave: "Wave 2", days: ["Monday","Tuesday","Wednesday","Thursday","Friday"] },
+  { name: "Grace Kim",        id: "T-1144", route: "Route 03", shift: "AM", wave: "Wave 3", days: ["Wednesday","Thursday","Friday","Saturday"] },
+  { name: "Carlos Mendez",    id: "T-1160", route: "Route 51", shift: "AM", wave: "Wave 1", days: ["Monday","Tuesday","Friday"] },
+  { name: "Fatima Al-Rashid", id: "T-1177", route: "Route 18", shift: "AM", wave: "Wave 2", days: ["Monday","Wednesday","Friday","Saturday"] },
+  { name: "Brandon Lee",      id: "T-1192", route: "Route 40", shift: "AM", wave: "Wave 3", days: ["Monday","Tuesday","Wednesday","Thursday"] },
+];
+
+const STATUS_LABELS = {
+  present: "Present",
+  late: "Late",
+  callout: "Call Out",
+  ncns: "No Call No Show",
+  other: "Other"
+};
+
+const COLORS = ["#2563eb","#16a34a","#d97706","#dc2626","#7c3aed","#0891b2","#c026d3"];
+
+let allEmployees = [];
+let todayEmployees = [];
+let attendance = {};
+let currentDay = "";
+let searchQuery = "";
+let completedTime = null;
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', () => {
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const today = days[new Date().getDay()];
+  currentDay = today;
+
+  const sel = document.getElementById('dayOverride');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === today) { sel.selectedIndex = i; break; }
+  }
+
+  document.getElementById('currentDateLabel').textContent =
+    `${today}, ${new Date().toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}`;
+});
+
+window.addEventListener('online', () => updateConnStatus(true));
+window.addEventListener('offline', () => updateConnStatus(false));
+
+function updateConnStatus(online) {
+  document.getElementById('connStatus').textContent = online ? 'Online' : 'Offline';
+  document.querySelector('.dot').style.background = online ? 'var(--success)' : 'var(--warning)';
+  document.getElementById('offlineBanner').classList.toggle('show', !online);
+  if (online) showToast('Connection restored. Syncing data...');
+}
+
+// ============================================================
+// FILE UPLOAD
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws);
+      allEmployees = data.map(row => ({
+        name:  row['Associate Name'] || row['Name'] || 'Unknown',
+        id:    row['Transporter ID'] || row['ID'] || 'N/A',
+        route: row['Route'] || '',
+        shift: row['Shift'] || '',
+        wave:  row['Wave'] || '',
+        days:  parseDays(row)
+      }));
+      initRollCall();
+    } catch(err) {
+      showToast('Error reading file. Loading demo instead.');
+      loadDemoData();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseDays(row) {
+  const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+  const found = [];
+  days.forEach(d => { if (row[d] === 1 || row[d] === 'Y' || row[d] === 'yes' || row[d] === true) found.push(d); });
+  if (row['Days']) found.push(...String(row['Days']).split(',').map(s => s.trim()));
+  return found.length ? found : days.slice(0,5);
+}
+
+function loadDemoData() {
+  allEmployees = DEMO_EMPLOYEES;
+  initRollCall();
+  showToast('Demo schedule loaded successfully.');
+}
+
+// ============================================================
+// ROLL CALL INIT
+// ============================================================
+function initRollCall() {
+  attendance = {};
+  filterByDay();
+  document.getElementById('uploadSection').style.display = 'none';
+  document.getElementById('rollcallSection').style.display = 'block';
+  advanceStep(3);
+}
+
+function filterByDay() {
+  const day = document.getElementById('dayOverride').value;
+  currentDay = day;
+  todayEmployees = allEmployees.filter(e => e.days.includes(day));
+  attendance = {};
+  todayEmployees.forEach(e => { attendance[e.id] = { status: null, notes: '', time: null }; });
+  renderList();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderList() {
+  const list = document.getElementById('associateList');
+  const q = searchQuery.toLowerCase();
+  const filtered = todayEmployees.filter(e =>
+    e.name.toLowerCase().includes(q) || e.route.toLowerCase().includes(q) || e.id.toLowerCase().includes(q)
+  );
+
+  list.innerHTML = '';
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="e-icon">📭</div><h3>No associates match your search</h3></div>`;
+    updateStats();
+    return;
+  }
+
+  filtered.forEach(emp => {
+    const rec = attendance[emp.id] || { status: null, notes: '', time: null };
+    const initials = emp.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const color = COLORS[emp.name.charCodeAt(0) % COLORS.length];
+    const statusClass = rec.status ? `status-${rec.status}` : '';
+    const timeStr = rec.time ? new Date(rec.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+
+    const row = document.createElement('div');
+    row.className = `associate-row ${statusClass}`;
+    row.id = `row-${emp.id}`;
+    row.innerHTML = `
+      <div class="row-top">
+        <div class="avatar" style="background:${color}20;color:${color}">${initials}</div>
+        <div class="assoc-info">
+          <div class="assoc-name">${emp.name}</div>
+          <div class="assoc-meta">${emp.id} &bull; ${emp.route} &bull; ${emp.shift} &bull; ${emp.wave}</div>
+        </div>
+        <div class="time-badge ${rec.time ? 'recorded' : ''}" id="time-${emp.id}">
+          ${rec.time ? '✓ ' + timeStr : 'Pending'}
+        </div>
+      </div>
+      <div class="status-btns">
+        ${Object.entries(STATUS_LABELS).map(([key, lbl]) =>
+          `<button class="status-btn ${rec.status === key ? 'active-'+key : ''}"
+            onclick="setStatus('${emp.id}', '${key}')">${lbl}</button>`
+        ).join('')}
+      </div>
+      <textarea class="notes-input" rows="1" placeholder="Notes (optional)..."
+        onchange="setNotes('${emp.id}', this.value)"
+        onfocus="this.rows=2" onblur="this.rows=1">${rec.notes || ''}</textarea>
+    `;
+    list.appendChild(row);
+  });
+
+  updateStats();
+}
+
+function setStatus(id, status) {
+  if (!attendance[id]) attendance[id] = { status: null, notes: '', time: null };
+  attendance[id].status = status;
+  attendance[id].time = Date.now();
+
+  const row = document.getElementById(`row-${id}`);
+  if (row) {
+    row.className = `associate-row status-${status}`;
+    // Update buttons
+    row.querySelectorAll('.status-btn').forEach(btn => {
+      const key = btn.textContent.toLowerCase().replace(/ /g,'');
+      const map = { 'present':'present','late':'late','callout':'callout','nocallnoshow':'ncns','other':'other' };
+      btn.className = 'status-btn';
+      if (Object.keys(STATUS_LABELS).find(k => STATUS_LABELS[k] === btn.textContent) === status) {
+        btn.className = `status-btn active-${status}`;
+      }
+    });
+    // Update time badge
+    const tb = document.getElementById(`time-${id}`);
+    if (tb) {
+      const timeStr = new Date(attendance[id].time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      tb.className = 'time-badge recorded';
+      tb.textContent = '✓ ' + timeStr;
+    }
+  }
+  updateStats();
+}
+
+function setNotes(id, val) {
+  if (!attendance[id]) attendance[id] = { status: null, notes: '', time: null };
+  attendance[id].notes = val;
+}
+
+function filterSearch(q) {
+  searchQuery = q;
+  renderList();
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  const recs = todayEmployees.map(e => attendance[e.id] || { status: null });
+  const present = recs.filter(r => r.status === 'present').length;
+  const late = recs.filter(r => r.status === 'late').length;
+  const absent = recs.filter(r => r.status === 'callout' || r.status === 'ncns').length;
+  const pending = recs.filter(r => !r.status).length;
+
+  document.getElementById('statTotal').textContent = todayEmployees.length;
+  document.getElementById('statPresent').textContent = present;
+  document.getElementById('statLate').textContent = late;
+  document.getElementById('statAbsent').textContent = absent;
+  document.getElementById('statPending').textContent = pending;
+
+  const btn = document.getElementById('completeBtn');
+  const info = document.getElementById('completeInfo');
+  if (pending === 0) {
+    btn.disabled = false;
+    info.innerHTML = `<strong>All ${todayEmployees.length} associates marked.</strong> Ready to complete.`;
+  } else {
+    btn.disabled = true;
+    info.innerHTML = `<strong>${pending}</strong> of ${todayEmployees.length} associates still pending.`;
+  }
+}
+
+// ============================================================
+// COMPLETE ROLL CALL
+// ============================================================
+function completeRollCall() {
+  completedTime = new Date();
+  advanceStep(4);
+
+  const recs = todayEmployees.map(e => attendance[e.id]);
+  const present = recs.filter(r => r.status === 'present').length;
+  const late = recs.filter(r => r.status === 'late').length;
+  const absent = recs.filter(r => r.status === 'callout' || r.status === 'ncns').length;
+  const other = recs.filter(r => r.status === 'other').length;
+
+  document.getElementById('modalSummary').innerHTML = `
+    <strong>${completedTime.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</strong> &bull;
+    ${currentDay}, ${completedTime.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}<br><br>
+    Present: <strong>${present}</strong> &bull;
+    Late: <strong>${late}</strong> &bull;
+    Absent: <strong>${absent}</strong> &bull;
+    Other: <strong>${other}</strong><br><br>
+    Report saved to database. Download or email below.
+  `;
+  document.getElementById('completeModal').classList.add('visible');
+}
+
+// ============================================================
+// DOWNLOAD REPORT
+// ============================================================
+function downloadReport() {
+  const rows = [["Date","Day","Associate Name","Transporter ID","Route","Shift","Wave","Attendance Status","Notes","Recorded By","Time Recorded"]];
+  const dateStr = completedTime ? completedTime.toLocaleDateString('en-US') : new Date().toLocaleDateString('en-US');
+
+  todayEmployees.forEach(e => {
+    const rec = attendance[e.id] || {};
+    rows.push([
+      dateStr,
+      currentDay,
+      e.name,
+      e.id,
+      e.route,
+      e.shift,
+      e.wave,
+      STATUS_LABELS[rec.status] || rec.status || '',
+      rec.notes || '',
+      'J. Martinez',
+      rec.time ? new Date(rec.time).toLocaleTimeString() : ''
+    ]);
+  });
+
+  const extraNotes = document.getElementById('extraNotes').value;
+  if (extraNotes.trim()) {
+    rows.push(['','','','','','','','Extra Notes:',extraNotes,'','']);
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = rows[0].map(() => ({wch:18}));
+  XLSX.utils.book_append_sheet(wb, ws, 'Attendance Report');
+  XLSX.writeFile(wb, `Attendance_${currentDay}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Report downloaded successfully.');
+}
+
+function simulateEmail() {
+  document.getElementById('completeModal').classList.remove('visible');
+  showToast('Report emailed to distribution list (ops@company.com, hr@company.com)');
+}
+
+function newSession() {
+  document.getElementById('completeModal').classList.remove('visible');
+  document.getElementById('uploadSection').style.display = 'block';
+  document.getElementById('rollcallSection').style.display = 'none';
+  document.getElementById('associateList').innerHTML = '';
+  allEmployees = []; todayEmployees = []; attendance = {};
+  advanceStep(2);
+  showToast('Ready for a new session.');
+}
+
+// ============================================================
+// STEP TRACKER
+// ============================================================
+function advanceStep(active) {
+  [1,2,3,4].forEach(n => {
+    const s = document.getElementById(`step${n}`);
+    const num = document.getElementById(`snum${n}`);
+    s.className = 'step';
+    if (n < active) { s.classList.add('done'); num.textContent = '✓'; }
+    else if (n === active) { s.classList.add('active'); num.textContent = n; }
+    else { num.textContent = n; }
+    const div = document.getElementById(`div${n}`);
+    if (div) div.className = n < active ? 'step-divider done' : 'step-divider';
+  });
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
