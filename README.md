@@ -2,7 +2,7 @@
 
 A responsive, offline-capable web application for employee roll call and attendance tracking. Built for supervisors to conduct daily attendance on a tablet or laptop, eliminating paper attendance sheets.
 
-**[Live Demo](https://yourusername.github.io/rollcall-demo)**
+**[Live Demo](https://haider094.github.io/rollcall-demo)**
 
 ---
 
